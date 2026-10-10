@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Book | LitLens</title>
+</head>
+<body>
+    <h1>Upload a Book</h1>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    {% if message %}
+        <p style="color: green;">{{ message }}</p>
+        <p>Stored filename: {{ stored_name }}</p>
+    {% endif %}
+
+    <form action="{{ url_for('upload_book') }}"
+          method="POST"
+          enctype="multipart/form-data">
+
+        <label for="book">Choose a PDF or TXT book:</label>
+
+        <input
+            type="file"
+            id="book"
+            name="book"
+            accept=".pdf,.txt"
+            required
+        >
+
+        <button type="submit">Upload Book</button>
+    </form>
+
+    <p><a href="{{ url_for('home') }}">Back to Home</a></p>
+</body>
+</html>
