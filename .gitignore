@@ -3,3 +3,4 @@ __pycache__
 .env
 instance
 test_extractor.py
+test_chapter_detector.py
