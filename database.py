@@ -24,6 +24,22 @@ def init_db():
                 processing_status TEXT NOT NULL DEFAULT 'pending'
                 )
                 """)
+        
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS chapters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL,
+                chapter_number INTEGER NOT NULL,
+                heading_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                text TEXT NOT NULL,
+                FOREIGN KEY (book_id)
+                    REFERENCES books (id)
+                    ON DELETE CASCADE,
+                UNIQUE (book_id, chapter_number)
+            )
+        """)
+
 
 if __name__ == "__main__":
     init_db()
