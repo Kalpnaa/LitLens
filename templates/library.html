@@ -7,6 +7,13 @@
 </head>
 <body>
     <h1>My Library</h1>
+     {% if message %}
+    <p style="color: green;">{{ message }}</p>
+{% endif %}
+
+{% if error %}
+    <p style="color: red;">{{ error }}</p>
+{% endif %}
 
     <p>
         <a href="{{ url_for('upload_book') }}">Upload another book</a>
@@ -24,6 +31,18 @@
                     <p>File type: {{ book["file_type"] | upper }}</p>
                     <p>Uploaded at: {{ book["uploaded_at"] }}</p>
                     <p>Status: {{ book["processing_status"] }}</p>
+                    <p>Detected sections: {{ book["section_count"] }}</p>
+
+{% if book["processing_status"] == "completed" %}
+    <p>Processing status: Completed</p>
+{% else %}
+    <p>Processing status: Pending</p>
+{% endif %}
+
+<form action="{{ url_for('process_uploaded_book', book_id=book['id']) }}"
+      method="POST">
+    <button type="submit">Process Book</button>
+</form>
                 </li>
             {% endfor %}
         </ul>

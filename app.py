@@ -6,6 +6,8 @@ from pathlib import Path
 import sqlite3
 import uuid
 from database import init_db,get_db_connection
+from book_processor import process_book
+
 app = Flask(__name__)
 
 #store uploaded books
@@ -125,16 +127,27 @@ def upload_book():
 @app.route("/library")
 def library():
     with get_db_connection() as connection:
-        books = connection.execute(
-            """
-            SELECT id,title, original_filename, file_type,
-            uploaded_at, processing_status
-            FROM books
-            ORDER BY id DESC
-            """
-        ).fetchall()
-        
-        return render_template("library.html",books=books)
+        books = connection.execute("""
+            SELECT
+                b.id,
+                b.title,
+                b.original_filename,
+                b.file_type,
+                b.uploaded_at,
+                b.processing_status,
+                COUNT(c.id) AS section_count
+            FROM books AS b
+            LEFT JOIN chapters AS c ON c.book_id = b.id
+            GROUP BY b.id
+            ORDER BY b.id DESC
+        """).fetchall()
+
+    return render_template(
+        "library.html",
+        books=books,
+        message=request.args.get("message"),
+        error=request.args.get("error")
+    )
     
   
 @app.errorhandler(413)
@@ -144,5 +157,21 @@ def file_too_large(error):
         error="File is too large. The maximum size is 20 MB."
     ), 413  
 
+@app.route("/proces/<int:book_id>",methods=["POST"])
+def process_uploaded_book(book_id):
+    try:
+        count = process_book(book_id)
+        
+        return redirect(
+            url_for("library",message=f"Book processed successfully. {count} section saved")
+        )
+    
+    except (ValueError,FileNotFoundError,OSError) as error:
+        app.logger.warning("Book Processing failed: %s",error)
+        
+        return redirect(
+            url_for("library",error="an unexpected error occured during processing")
+        )
+        
 if __name__ == "__main__":
     app.run(debug=True)
