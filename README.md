@@ -14,8 +14,8 @@ The core idea is simple:
 
 | Phase    | Description                        | Status    |
 | -------- | ---------------------------------- | --------- |
-| Phase 1  | 📖 Book Upload                     | ⏳ Pending |
-| Phase 2  | ⚙️ Book Processing                 | ⏳ Pending |
+| Phase 1  | 📖 Book Upload                     | DONE |
+| Phase 2  | ⚙️ Book Processing                 | DONE |
 | Phase 3  | 🧩 Chunk Storage                   | ⏳ Pending |
 | Phase 4  | 🔎 Question Processing & Retrieval | ⏳ Pending |
 | Phase 5  | 🛡️ Spoiler Protection             | ⏳ Pending |
