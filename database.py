@@ -39,6 +39,26 @@ def init_db():
                 UNIQUE (book_id, chapter_number)
             )
         """)
+        
+        
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL,
+                chapter_id INTEGER NOT NULL,
+                chunk_number INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                word_count INTEGER NOT NULL,
+                FOREIGN KEY (book_id)
+                    REFERENCES books (id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (chapter_id)
+                    REFERENCES chapters (id)
+                    ON DELETE CASCADE,
+                UNIQUE (chapter_id, chunk_number)
+            )
+        """)
+
 
 
 if __name__ == "__main__":

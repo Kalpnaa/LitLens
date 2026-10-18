@@ -5,3 +5,7 @@ instance
 test_extractor.py
 test_chapter_detector.py
 test_book_processor.py
+test_text_chunker.py
+test_chunker.py
+test_chunk_processor.py
+

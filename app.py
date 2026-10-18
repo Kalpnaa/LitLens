@@ -160,18 +160,32 @@ def file_too_large(error):
 @app.route("/proces/<int:book_id>",methods=["POST"])
 def process_uploaded_book(book_id):
     try:
-        count = process_book(book_id)
+        result = process_book(book_id)
+
+        message = (
+            f"Book processed successfully: "
+            f"{result['sections']} sections and "
+            f"{result['chunks']} chunks saved."
+        )
+
         
         return redirect(
-            url_for("library",message=f"Book processed successfully. {count} section saved")
+            url_for("library",message=message)
         )
     
-    except (ValueError,FileNotFoundError,OSError) as error:
-        app.logger.warning("Book Processing failed: %s",error)
-        
+    except (ValueError, FileNotFoundError, OSError) as error:
+        app.logger.warning("Book processing failed: %s", error)
+        return redirect(url_for("library", error=str(error)))
+
+    except Exception:
+        app.logger.exception("Unexpected error while processing book")
         return redirect(
-            url_for("library",error="an unexpected error occured during processing")
+            url_for(
+                "library",
+                error="An unexpected error occurred during processing."
+            )
         )
+
         
 if __name__ == "__main__":
     app.run(debug=True)
