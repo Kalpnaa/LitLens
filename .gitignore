@@ -8,4 +8,5 @@ test_book_processor.py
 test_text_chunker.py
 test_chunker.py
 test_chunk_processor.py
-
+test_retriever.py
+test_retrieval_results.py
