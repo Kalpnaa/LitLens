@@ -17,8 +17,8 @@ The core idea is simple:
 | Phase 1  | 📖 Book Upload                     | DONE |
 | Phase 2  | ⚙️ Book Processing                 | DONE |
 | Phase 3  | 🧩 Chunk Storage                   | DONE |
-| Phase 4  | 🔎 Question Processing & Retrieval | ⏳ Pending |
-| Phase 5  | 🛡️ Spoiler Protection             | ⏳ Pending |
+| Phase 4  | 🔎 Question Processing & Retrieval | DONE |
+| Phase 5  | 🛡️ Spoiler Protection             | DONE |
 | Phase 6  | 💬 Question Answering              | ⏳ Pending |
 | Phase 7  | 👤 Character Intelligence          | ⏳ Pending |
 | Phase 8  | 🕸️ Character Relationships        | ⏳ Pending |
