@@ -7,6 +7,8 @@ import sqlite3
 import uuid
 from database import init_db,get_db_connection
 from book_processor import process_book
+from retriever import retrieve_chunks,retrieve_summary_chunks,is_summary_request
+from llm import generate_answer
 
 app = Flask(__name__)
 
@@ -186,6 +188,110 @@ def process_uploaded_book(book_id):
             )
         )
 
+@app.route("/book/<int:book_id>",methods=["GET","POST"])
+def read_book(book_id):
+    answer = None
+    sources = []
+    question = ""
+    current_chapter = 1
+    error = None
+    
+    with get_db_connection() as connection:
+        book = connection.execute(
+            "SELECT * FROM books WHERE id = ?",
+            (book_id,)
+        ).fetchone()
         
+        if book is None:
+            return redirect(
+                url_for("library",error="book not found")
+            )
+        chapters = connection.execute(
+            """
+            SELECT chapter_number,title
+            FROM chapters
+            WHERE book_id = ?
+            order by chapter_number
+            """,
+            (book_id,)
+            
+        ).fetchall()
+    
+    if book["processing_status"]!= "completed" or not chapters:
+        return redirect(
+            url_for(
+                "library",
+                error="please process this book before reading"
+            )
+        )
+    
+    if request.method == "POST":
+        question = request.form.get("question","").strip()
+        chapter_input = request.form.get("current_chapter","")
+        
+        try:
+            current_chapter = int(chapter_input)
+        except (TypeError,ValueError):
+            error = "please select a valid chapter."
+        
+        valid_chapters = {
+            chapter["chapter_number"] for chapter in chapters
+        }
+        if not error and current_chapter not in valid_chapters:
+            error = "The selected chapter is not avaible"
+            
+        if not error and not question:
+            error = "please enter a question or summary request"
+            
+        if not error:
+            try:
+                if is_summary_request(question):
+                    results = retrieve_summary_chunks(
+                        book_id = book_id,
+                        current_chapter=current_chapter
+                    )
+                else:
+                    results= retrieve_chunks(
+                        book_id=book_id,
+                        question=question,
+                        current_chapter=current_chapter,
+                        top_k=5
+                    )
+                    
+                if not results:
+                    error = (
+                        "I couldn't find relevant information "
+                        "in the chapters you've read so far."
+                    )
+                else:
+                    context = "\n\n".join(
+                        (
+                            f"Chapter {item['chapter_number']}: "
+                            f"{item['chapter_title']}\n"
+                            f"{item['text']}"
+                        )
+                        for item in results
+                    )
+
+                    answer = generate_answer(question, context)
+                    sources = results
+            except Exception:
+                app.logger.exception("Question answering failed")
+                error = (
+                    "Sorry, something went wrong while answering. "
+                    "Please try again."
+                )
+
+    return render_template(
+        "reader.html",
+        book=book,
+        chapters=chapters,
+        answer=answer,
+        sources=sources,
+        question=question,
+        current_chapter=current_chapter,
+        error=error
+    )
+   
 if __name__ == "__main__":
     app.run(debug=True)

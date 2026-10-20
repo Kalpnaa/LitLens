@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book["title"] }} | LitLens</title>
+</head>
+<body>
+    <h1>{{ book["title"] }}</h1>
+
+    <p>
+        Ask questions about your book without spoilers
+        from chapters you haven't read.
+    </p>
+
+    <p>
+        <a href="{{ url_for('library') }}">Back to My Library</a>
+    </p>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form
+        action="{{ url_for('read_book', book_id=book['id']) }}"
+        method="POST"
+    >
+        <label for="current_chapter">
+            Highest chapter you have read:
+        </label>
+
+        <select
+            id="current_chapter"
+            name="current_chapter"
+            required
+        >
+            {% for chapter in chapters %}
+                <option
+                    value="{{ chapter['chapter_number'] }}"
+                    {% if chapter['chapter_number'] == current_chapter %}
+                        selected
+                    {% endif %}
+                >
+                    Chapter {{ chapter['chapter_number'] }}:
+                    {{ chapter['title'] }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+
+        <label for="question">
+            What would you like to know?
+        </label>
+
+        <br>
+
+        <textarea
+            id="question"
+            name="question"
+            rows="4"
+            cols="50"
+            placeholder="Ask a question or request a summary of the story so far..."
+            required
+        >{{ question }}</textarea>
+
+        <br><br>
+
+        <button type="submit">Ask LitLens</button>
+    </form>
+
+    {% if answer %}
+        <hr>
+
+        <h2>LitLens's Answer</h2>
+
+        <p style="white-space: pre-wrap;">{{ answer }}</p>
+
+        {% if sources %}
+            <h3>Source Passages</h3>
+
+            {% for source in sources %}
+                <details>
+                    <summary>
+                        Chapter {{ source['chapter_number'] }}:
+                        {{ source['chapter_title'] }}
+                    </summary>
+
+                    <p style="white-space: pre-wrap;">{{ source['text'] }}</p>
+                </details>
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+</body>
+</html>
