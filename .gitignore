@@ -10,3 +10,4 @@ test_chunker.py
 test_chunk_processor.py
 test_retriever.py
 test_retrieval_results.py
+test_llm.py
