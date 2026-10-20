@@ -12,147 +12,145 @@ The core idea is simple:
 
 **Overall Status:** 🟡 In Development
 
-| Phase    | Description                        | Status    |
-| -------- | ---------------------------------- | --------- |
-| Phase 1  | 📖 Book Upload                     | DONE |
-| Phase 2  | ⚙️ Book Processing                 | DONE |
-| Phase 3  | 🧩 Chunk Storage                   | DONE |
-| Phase 4  | 🔎 Question Processing & Retrieval | DONE |
-| Phase 5  | 🛡️ Spoiler Protection             | DONE |
-| Phase 6  | 💬 Question Answering              | ⏳ Pending |
-| Phase 7  | 👤 Character Intelligence          | ⏳ Pending |
-| Phase 8  | 🕸️ Character Relationships        | ⏳ Pending |
-| Phase 9  | 📖 Reading Interface               | ⏳ Pending |
-| Phase 10 | 📊 Evaluation                      | ⏳ Pending |
-| Phase 11 | 🚀 Documentation & Deployment      | ⏳ Pending |
+| Phase | Description | Status |
+|---|---|---|
+| Phase 1 | 📖 Book Upload | ✅ Done |
+| Phase 2 | ⚙️ Book Processing | ✅ Done |
+| Phase 3 | 🧩 Chunk Creation and Storage | ✅ Done |
+| Phase 4 | 🔎 Question Processing and Retrieval | ✅ Done |
+| Phase 5 | 🛡️ Spoiler-Aware Retrieval | ✅ Done |
+| Phase 6 | 💬 Question Answering and Local LLM Integration | ✅ Done |
+| Phase 7 | 👤 Character Intelligence | ⏳ Pending |
+| Phase 8 | 🕸️ Character Relationship Analysis | ⏳ Pending |
+| Phase 9 | 📖 Reading Interface and Progress Tracking | ⏳ Pending |
+| Phase 10 | 📊 Evaluation | ⏳ Pending |
+| Phase 11 | 🚀 Documentation and Deployment | ⏳ Pending |
 
-> The architecture and phases may evolve during development as implementation and experimentation reveal better approaches.
+> The architecture and phases may evolve as implementation and experimentation reveal better approaches.
 
 ---
 
-# 🏗️ Development Pipeline
+## 🏗️ Development Pipeline
 
-The initial LitLens pipeline is:
+The current LitLens pipeline is:
 
 ```text
 Book Upload
      ↓
 Book Processing
      ↓
+Text Extraction
+     ↓
 Chapter Detection
      ↓
-Text Preprocessing
+Text Chunking
      ↓
-Chunk Creation
-     ↓
-Chunk Storage
-     ↓
-Book / NLP Intelligence
+Chunk Storage in SQLite
      ↓
 User Question
      ↓
 Current Reading Position
      ↓
-Spoiler / Access Filter
+Spoiler-Aware Chapter Filtering
      ↓
-Relevant Chunk Retrieval
+TF-IDF Retrieval + Cosine Similarity
      ↓
-Answer Generation
+Relevant Book Context
      ↓
-Answer + Sources
+Local LLM Answer Generation
+     ↓
+Answer + Source Passages
 ```
 
-The system follows the principle:
+LitLens follows the principle:
 
 > **Process once, retrieve many times.**
 
-The book should not be processed from scratch every time the user asks a question.
+Uploaded books are processed and stored so that subsequent questions can use the saved chapters and chunks without processing the entire book again.
 
 ---
 
-# 📌 Phase 1 — Book Upload
+## 📌 Phase 1 — Book Upload
 
-**Status:** ⏳ Pending
+**Status: ✅ Done**
 
-The user uploads a supported book file to LitLens.
+Implemented book uploading through the Flask application.
 
-### Goals
+### Features
 
-* Accept book files
-* Validate uploaded files
-* Store the original book
-* Create a book record
-* Extract basic metadata where possible
+- Accepts PDF and TXT files.
+- Validates file extensions and uploaded filenames.
+- Generates unique stored filenames.
+- Saves uploaded books to the application's upload directory.
+- Registers book metadata in SQLite.
+- Handles invalid uploads and file/database errors.
 
-### Expected Output
+### Flow
+
+```text
+User Uploads Book
+        ↓
+Validate File
+        ↓
+Generate Unique Filename
+        ↓
+Save Original File
+        ↓
+Create SQLite Book Record
+```
+
+**GitHub Issue:** Book Upload
+
+---
+
+## ⚙️ Phase 2 — Book Processing
+
+**Status: ✅ Done**
+
+Implemented the book-processing pipeline to convert uploaded files into structured textual content.
+
+### Features
+
+- Extracts text using the text extraction module.
+- Detects chapters or sections.
+- Preserves chapter numbers, titles, and heading types.
+- Prepares chapter content for chunking.
+- Updates processing status in the database.
+- Handles missing files and unreadable content.
+
+### Flow
 
 ```text
 Uploaded Book
-      ↓
-Book Record
-      ↓
-Stored Original File
-```
-
-### GitHub Issue
-
-`Phase 1: Implement Book Upload`
-
----
-
-# ⚙️ Phase 2 — Book Processing
-
-**Status:** ⏳ Pending
-
-The uploaded book is processed into structured textual information.
-
-### Goals
-
-* Extract text
-* Detect chapters
-* Preserve chapter boundaries
-* Clean unnecessary text
-* Prepare content for NLP processing
-
-### Expected Output
-
-```text
-Book
- ↓
-Extracted Text
- ↓
-Detected Chapters
- ↓
+     ↓
+Text Extraction
+     ↓
+Chapter Detection
+     ↓
 Structured Chapter Data
+     ↓
+Chunk Preparation
 ```
 
-### GitHub Issue
-
-`Phase 2: Implement Book Processing Pipeline`
+The processing pipeline prepares content before replacing existing chapter and chunk records, using database transactions to maintain consistency.
 
 ---
 
-# 🧩 Phase 3 — Chunk Storage
+## 🧩 Phase 3 — Chunk Creation and Storage
 
-**Status:** ⏳ Pending
+**Status: ✅ Done**
 
-Chapters are divided into smaller chunks suitable for retrieval.
+Implemented text chunking to make book content suitable for information retrieval.
 
-Each chunk should retain enough metadata to identify where it came from.
+### Features
 
-Possible metadata:
+- Divides chapter text into smaller chunks.
+- Uses a configurable maximum word count.
+- Supports sentence overlap to preserve context between adjacent chunks.
+- Stores chunks in SQLite with associated book and chapter identifiers.
+- Saves chunk numbers and word counts.
 
-```text
-book_id
-chapter_id
-chapter_number
-chunk_id
-chunk_number
-text
-position
-```
-
-### Expected Structure
+### Database Structure
 
 ```text
 Book
@@ -170,57 +168,64 @@ Book
       └── Chunk 2
 ```
 
-### GitHub Issue
+### Stored Metadata
 
-`Phase 3: Implement Chapter Chunking and Storage`
+- `book_id`
+- `chapter_id`
+- `chapter_number`
+- `chunk_number`
+- `text`
+- `word_count`
 
 ---
 
-# 🔎 Phase 4 — Question Processing & Retrieval
+## 🔎 Phase 4 — Question Processing and Retrieval
 
-**Status:** ⏳ Pending
+**Status: ✅ Done**
 
-When the reader asks a question, LitLens retrieves relevant information from the already processed book.
+Implemented the initial retrieval system using traditional information retrieval techniques.
 
-### Flow
+### Techniques
+
+- Question normalization
+- TF-IDF vectorization
+- Cosine similarity
+- Relevance scoring
+- Top-K chunk retrieval
+
+### Retrieval Flow
 
 ```text
 User Question
       ↓
-Question Processing
+Question Normalization
       ↓
-Current Reading Position
+Retrieve Accessible Book Chunks
       ↓
-Accessible Chapters
+TF-IDF Vectorization
       ↓
-Relevant Chunk Retrieval
-      ↓
-Ranked Results
-```
-
-The first retrieval implementation may use:
-
-```text
-TF-IDF
-   +
 Cosine Similarity
+      ↓
+Rank Relevant Chunks
+      ↓
+Return Top-K Results
 ```
 
-Later, semantic retrieval can be evaluated using embeddings.
+The current implementation retrieves up to five relevant chunks for ordinary questions, excluding chunks from chapters beyond the reader's selected chapter.
 
-### GitHub Issue
-
-`Phase 4: Implement Question Retrieval`
+Semantic retrieval using sentence embeddings may be explored in a future improvement.
 
 ---
 
-# 🛡️ Phase 5 — Spoiler Protection
+## 🛡️ Phase 5 — Spoiler-Aware Retrieval
 
-**Status:** ⏳ Pending
+**Status: ✅ Done**
 
-This is the core differentiating feature of LitLens.
+Implemented chapter-based access filtering before relevant context is sent to the answer-generation model.
 
-If the reader has reached Chapter 8:
+### Example
+
+If the reader has completed Chapter 8:
 
 ```text
 Accessible:
@@ -230,267 +235,337 @@ Restricted:
 Chapter 9 → Final Chapter
 ```
 
-The restriction must happen **before relevant context is passed to the answering system**.
+### Implementation
+
+- Accepts the reader's current chapter.
+- Filters database retrieval using the chapter number.
+- Ranks only eligible chunks.
+- Passes retrieved context to the answer-generation component.
+
+**Core principle:** Future chapters must be excluded during retrieval, not retrieved and hidden afterward.
+
+---
+
+## 💬 Phase 6 — Question Answering and Local LLM Integration
+
+**Status: ✅ Done**
+
+Integrated retrieval with a locally running language model to generate answers grounded in the permitted book context.
+
+### Technology
+
+- Ollama
+- Qwen 2.5 3B
+- Python `ollama` package
+
+### Features
+
+- Generates answers from retrieved book passages.
+- Uses a system prompt designed for spoiler-aware responses.
+- Avoids relying on outside knowledge when answering book questions.
+- Returns an insufficient-context response when the retrieved text cannot support an answer.
+- Displays the answer and relevant source passages in the Flask interface.
+- Detects requests for summaries of the story so far.
+- Retrieves all chunks up to the selected chapter for summary requests.
+
+### Answer Generation Flow
+
+```text
+User Question
+      ↓
+Retrieve Permitted Context
+      ↓
+Build Context Prompt
+      ↓
+Ollama — Qwen 2.5 3B
+      ↓
+Generate Answer
+      ↓
+Display Answer + Source Passages
+```
+
+### Ollama Setup
+
+Download Ollama for Windows from:
+
+https://ollama.com/download/windows
+
+Download the model:
+
+```bash
+ollama pull qwen2.5:3b
+```
+
+Run and initialize the model:
+
+```bash
+ollama run qwen2.5:3b
+```
+
+Install the Python integration:
+
+```bash
+python -m pip install ollama
+```
+
+### Summary Generation
+
+LitLens identifies summary requests separately from ordinary questions and retrieves the complete eligible chapter content.
+
+Summary generation is being optimized to reduce latency for longer contexts while preserving important story events and spoiler protection.
+
+---
+
+# 🔜 Upcoming Development Phases
+
+## 👤 Phase 7 — Character Intelligence
+
+**Status: ⏳ Pending**
+
+**GitHub Issue #8**
+
+Develop character extraction and analysis capabilities.
+
+### Goals
+
+- Identify character names and other relevant entities.
+- Detect character mentions across chapters.
+- Normalize name variations where possible.
+- Track the first appearance of a character.
+- Build chapter-wise character information.
 
 ### Example
-
-```text
-Current Chapter = 8
-
-Question
-   ↓
-Retrieve only Chapters 1–8
-   ↓
-Generate answer
-```
-
-The system should not retrieve Chapter 15 and simply hide it afterward.
-
-### GitHub Issue
-
-`Phase 5: Implement Spoiler-Aware Retrieval`
-
----
-
-# 💬 Phase 6 — Question Answering
-
-**Status:** ⏳ Pending
-
-After relevant chunks have been retrieved, LitLens produces an answer based on the permitted context.
-
-### Expected Output
-
-```text
-Answer:
-John left the house after his argument with Robert.
-
-Sources:
-Chapter 7
-Chapter 8
-```
-
-The answer should remain grounded in the retrieved book content.
-
-### GitHub Issue
-
-`Phase 6: Implement Question Answering`
-
----
-
-# 👤 Phase 7 — Character Intelligence
-
-**Status:** ⏳ Pending
-
-LitLens analyzes characters and other entities within the book.
-
-Potential NLP techniques:
-
-* Named Entity Recognition
-* Entity normalization
-* Mention counting
-* First appearance detection
-* Chapter-wise character tracking
-
-Example:
 
 ```text
 Mr. Darcy
 Darcy
 Mr Darcy
+     ↓
+Potentially the Same Character
 ```
 
-may need to be normalized as the same character.
+### Potential Techniques
 
-### GitHub Issue
+- Named Entity Recognition (NER)
+- Entity normalization
+- Mention counting
+- Chapter-wise entity tracking
 
-`Phase 7: Implement Character Extraction and Entity Analysis`
+Character information must also respect the reader's current chapter to prevent spoilers.
 
 ---
 
-# 🕸️ Phase 8 — Character Relationships
+## 🕸️ Phase 8 — Character Relationship Analysis
 
-**Status:** ⏳ Pending
+**Status: ⏳ Pending**
 
-LitLens can identify potential relationships between characters.
+**GitHub Issue #9**
 
-Initial approach:
+Identify and represent relationships between characters.
+
+### Initial Approach
 
 ```text
 Character A
      ↕
-Co-occurrence
+Co-occurrence and Context
      ↕
 Character B
 ```
 
-More advanced approaches may later attempt relationship classification.
+### Goals
 
-Example:
+- Identify characters appearing in related contexts.
+- Analyze surrounding sentences for relationship clues.
+- Explore relationship classification.
+- Represent relationships in a structured format.
+- Ensure future-chapter relationships remain inaccessible.
+
+### Example
 
 ```text
 Harry ─── FRIEND ─── Ron
 ```
 
-### GitHub Issue
-
-`Phase 8: Implement Character Relationship Analysis`
+Co-occurrence alone does not establish a real relationship; contextual evidence will be needed to improve accuracy.
 
 ---
 
-# 📖 Phase 9 — Reading Interface
+## 📖 Phase 9 — Reading Interface and Progress Tracking
 
-**Status:** ⏳ Pending
+**Status: ⏳ Pending**
 
-Create the reader interface and connect reading progress with the NLP system.
+**GitHub Issue #10**
 
-The system should know the reader's current position.
+Develop a more complete reading experience and connect reading progress with LitLens's NLP pipeline.
 
-For example:
+### Goals
+
+- Improve the book-reading interface.
+- Track the reader's current chapter.
+- Explore page-level reading progress where reliable page information is available.
+- Allow readers to ask questions while reading.
+- Provide access to character information and relationships.
+- Keep all generated answers restricted to the permitted reading position.
+
+### Example
 
 ```text
 Book: Example Book
 Current Chapter: 8
 Current Page: 142
+        ↓
+Spoiler-Aware Context
+        ↓
+Question Answering
 ```
 
-This information controls what content is available to retrieval.
-
-### GitHub Issue
-
-`Phase 9: Implement Reader and Reading Progress`
+The current implementation lets the reader select the highest chapter they have read. Persistent reading-progress tracking will be developed in this phase.
 
 ---
 
-# 📊 Phase 10 — Evaluation
+## 📊 Phase 10 — Evaluation
 
-**Status:** ⏳ Pending
+**Status: ⏳ Pending**
 
-Evaluate LitLens rather than only demonstrating that it works.
+**GitHub Issue #11**
 
-Potential evaluation areas:
+Evaluate LitLens systematically rather than relying only on manual demonstrations.
 
-### Retrieval
+### Retrieval Evaluation
 
-* Precision
-* Recall
-* Top-K retrieval accuracy
+- Precision@K
+- Recall@K
+- Top-K retrieval accuracy
+- Relevance of retrieved passages
 
-### Question Answering
+### Question-Answering Evaluation
 
-* Answer correctness
-* Context relevance
-* Grounding
+- Answer correctness
+- Context relevance
+- Faithfulness to the book
+- Handling of insufficient context
 
-### Spoiler Protection
+### Spoiler-Protection Evaluation
 
 Test questions whose answers occur:
 
 ```text
-Before current chapter
-At current chapter
-After current chapter
+Before the Current Chapter
+At the Current Chapter
+After the Current Chapter
 ```
 
-The system should demonstrate that future information is not used.
+The system should not use future-chapter content to answer questions about the story.
 
-### Traditional vs Semantic Retrieval
+### Performance Evaluation
 
-Potential experiment:
+- Retrieval latency
+- LLM generation latency
+- Summary generation time
+- Performance across different book lengths
+
+### Potential Experiment
 
 ```text
-TF-IDF
-   vs
-Sentence Embeddings
+TF-IDF Retrieval
+       vs
+Sentence-Embedding Retrieval
 ```
 
-### GitHub Issue
-
-`Phase 10: Evaluate LitLens NLP Pipeline`
+Evaluation results will help determine which improvements provide meaningful benefits.
 
 ---
 
-# 🚀 Phase 11 — Documentation & Deployment
+## 🚀 Phase 11 — Documentation and Deployment
 
-**Status:** ⏳ Pending
+**Status: ⏳ Pending**
 
-Final project preparation.
+Complete the project documentation and prepare LitLens for demonstration or deployment.
 
 ### Goals
 
-* Complete README
-* Add architecture diagram
-* Document NLP pipeline
-* Document database design
-* Add screenshots
-* Add installation instructions
-* Add usage instructions
-* Document experiments
-* Document limitations
-* Deploy the application if feasible
+- Finalize the README.
+- Document the architecture and processing pipeline.
+- Document the database schema.
+- Add screenshots and usage examples.
+- Include installation and setup instructions.
+- Record evaluation results and limitations.
+- Explore deployment options.
+- Document local LLM setup and resource requirements.
 
-### GitHub Issue
-
-`Phase 11: Final Documentation and Deployment`
+**GitHub Issue:** Documentation and Deployment
 
 ---
 
 # 🧠 NLP Techniques
 
-The project is designed to progressively explore NLP techniques.
+LitLens is designed to explore NLP techniques progressively.
 
 ### Traditional NLP
 
-* Tokenization
-* Sentence segmentation
-* Stopword handling
-* Stemming
-* Lemmatization
-* N-grams
-* POS tagging
+- Text normalization
+- Tokenization
+- Sentence segmentation
+- Stopword handling
+- Stemming and lemmatization
+- N-grams
+- Part-of-speech tagging
 
 ### Information Extraction
 
-* Named Entity Recognition
-* Entity normalization
-* Coreference resolution
-* Character extraction
-* Relationship extraction
+- Named Entity Recognition
+- Entity normalization
+- Coreference resolution
+- Character extraction
+- Relationship extraction
 
 ### Information Retrieval
 
-* Bag of Words
-* TF-IDF
-* Cosine similarity
-* Ranking
+- Bag of Words
+- TF-IDF
+- Cosine similarity
+- Relevance ranking
+- Top-K retrieval
 
 ### Modern NLP
 
-* Word embeddings
-* Sentence embeddings
-* Semantic similarity
-* Retrieval-Augmented Generation concepts
-* Question Answering
+- Word embeddings
+- Sentence embeddings
+- Semantic similarity
+- Retrieval-Augmented Generation concepts
+- Context-grounded question answering
+- Local LLM integration
 
-LLMs are considered an **optional later component**, not the foundation of LitLens.
+Not every technique listed above has been implemented. Advanced methods will be evaluated and added where they provide value.
 
 ---
 
-# 🧱 Initial Technology Direction
+# 🧱 Technology Stack
 
-| Component       | Technology              |
-| --------------- | ----------------------- |
-| Backend         | Python + Flask          |
-| Frontend        | HTML + CSS + JavaScript |
-| Templates       | Jinja                   |
-| Database        | SQLite initially        |
-| NLP             | NLTK / spaCy            |
-| ML / Retrieval  | scikit-learn            |
-| Data Processing | NumPy / pandas          |
-| Semantic Search | sentence-transformers   |
-| Vector Search   | FAISS                   |
-| LLM             | Optional                |
+| Component | Technology |
+|---|---|
+| Backend | Python, Flask |
+| Frontend | HTML, CSS, JavaScript |
+| Templates | Jinja |
+| Database | SQLite |
+| Retrieval | scikit-learn |
+| Ranking | TF-IDF, cosine similarity |
+| Book Processing | Python text extraction and chunking modules |
+| LLM Runtime | Ollama |
+| Language Model | Qwen 2.5 3B |
+| LLM Integration | Python `ollama` package |
 
-The technology stack may change if experimentation reveals a better technical approach.
+### Potential Future Technologies
+
+| Component | Candidate Technology |
+|---|---|
+| Advanced NLP | NLTK, spaCy |
+| Semantic Retrieval | sentence-transformers |
+| Vector Search | FAISS |
+| Evaluation | Custom retrieval and QA test datasets |
+
+These are potential extensions, not claims that every listed technology is already integrated.
 
 ---
 
@@ -501,82 +576,59 @@ LitLens is not intended to be a generic chatbot.
 Its purpose is to provide **context-aware assistance while preserving the reader's experience**.
 
 ```text
-                    LITLENS
+                  LITLENS
 
-                    📖 Read
+                   📖 Read
                       ↓
-                  🤔 Confused?
+                🤔 Confused?
                       ↓
-                  💬 Ask
+                   💬 Ask
                       ↓
-             🔎 Find relevant context
+             🔎 Retrieve Context
                       ↓
-             🛡️ Apply spoiler filter
+             🛡️ Filter Spoilers
                       ↓
-                 💡 Answer
+                🧠 Generate
                       ↓
-               📚 Continue reading
+                💡 Understand
+                      ↓
+              📚 Continue Reading
 ```
 
 ---
 
 # 📈 Development Philosophy
 
-LitLens will be developed incrementally.
+LitLens is developed incrementally, with each major phase tracked through GitHub Issues.
 
-The project aims to understand the underlying NLP concepts rather than simply connecting an LLM API.
+The project emphasizes understanding the underlying NLP and retrieval concepts instead of simply connecting a language model to a prompt.
 
-The intended progression is:
+The development progression is:
 
 ```text
+Book Processing
+      ↓
 Traditional NLP
       ↓
-Information Extraction
-      ↓
-Traditional Information Retrieval
-      ↓
-Semantic NLP
+Information Retrieval
       ↓
 Spoiler-Aware Retrieval
       ↓
 Question Answering
       ↓
-Optional LLM Integration
+Character Intelligence
+      ↓
+Relationship Analysis
+      ↓
+Reading Experience
+      ↓
+Evaluation
+      ↓
+Documentation and Deployment
 ```
 
-Each major development phase will be tracked using a GitHub Issue.
+The architecture can evolve as experimentation reveals better approaches.
 
 ---
 
-# 🗂️ GitHub Development Tracking
-
-Each phase will have its own GitHub Issue.
-
-Example:
-
-```text
-Phase 1
-└── Issue #1 — Book Upload
-
-Phase 2
-└── Issue #2 — Book Processing
-
-Phase 3
-└── Issue #3 — Chunk Storage
-
-Phase 4
-└── Issue #4 — Question Retrieval
-
-...
-```
-
-The README status will be updated as development progresses:
-
-```text
-⏳ Pending
-🔵 In Progress
-✅ Done
-⚠️ Blocked
-```
-
-The architecture will be finalized before implementation begins, and individual issues will be created when each phase is started.
+**Current milestone:** The initial book-processing, retrieval, spoiler-filtering, and question-answering pipeline is implemented. The next phase focuses on extracting character information from book content.
