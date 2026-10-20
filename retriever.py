@@ -115,3 +115,54 @@ def retrieve_chunks(book_id, question, current_chapter, top_k=5):
     results.sort(key=lambda item: item["similarity"], reverse=True)
 
     return results[:top_k]
+
+def is_summary_request(question):
+    """Detect requests to summarize the story read so far."""
+    if not question:
+        return False
+    
+    summary_patterns = [
+        r"\bsummary\b",
+        r"\bsummarize\b",
+        r"\bsummarise\b",
+        r"\brecap\b",
+        r"\bwhat happened (?:till|until|up to) now\b",
+        r"\bwhat has happened so far\b",
+        r"\bwhat happened so far\b",
+        r"\bstory so far\b",
+        r"\b(?:everything|all) (?:that has )?happened so far\b",
+        r"\bcatch me up\b",
+        r"\bup to this point\b",
+    ]
+
+    return any(
+        re.search(pattern, question.lower())
+        for pattern in summary_patterns
+    )
+    
+def retrieve_summary_chunks(book_id, current_chapter):
+    """
+    Retrieve all chunks from chapters up to the reader's
+    current chapter, ordered by chapter and chunk.
+    """
+    with get_db_connection() as connection:
+        rows = connection.execute(
+        """
+        SELECT
+        ch.chapter_number,
+        ch.title AS chapter_title,
+        c.chunk_number,
+        c.text,
+        1.0 AS similarity
+        FROM chunks AS c
+        JOIN chapters AS ch
+        ON c.chapter_id = ch.id
+        WHERE c.book_id = ?
+        AND ch.book_id = ?
+        AND ch.chapter_number <= ?
+        ORDER BY ch.chapter_number, c.chunk_number
+        """,
+        (book_id, book_id, current_chapter),
+        ).fetchall()
+        
+    return [dict(row) for row in rows if row["text"].strip()]
