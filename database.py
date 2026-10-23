@@ -6,6 +6,7 @@ database_path = Path(__file__).resolve().parent / "instance" / "litlens.db"
 def get_db_connection():
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 def init_db():
@@ -58,6 +59,51 @@ def init_db():
                 UNIQUE (chapter_id, chunk_number)
             )
         """)
+        
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS entities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL,
+                entity_name TEXT NOT NULL,
+                normalized_name TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                FOREIGN KEY (book_id)
+                    REFERENCES books (id)
+                    ON DELETE CASCADE,
+                UNIQUE (book_id, normalized_name, entity_type)
+            )
+        """)
+
+       
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS entity_mentions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_id INTEGER NOT NULL,
+                chapter_id INTEGER NOT NULL,
+                mention_text TEXT NOT NULL,
+                start_char INTEGER NOT NULL,
+                end_char INTEGER NOT NULL,
+                FOREIGN KEY (entity_id)
+                    REFERENCES entities (id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (chapter_id)
+                    REFERENCES chapters (id)
+                    ON DELETE CASCADE
+            )
+        """)
+
+        
+        # Improve lookup performance
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_entities_book
+            ON entities (book_id)
+        """)
+
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_entity_mentions_chapter
+            ON entity_mentions (chapter_id)
+        """)
+
 
 
 
