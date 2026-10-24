@@ -25,6 +25,47 @@ SUPPORTED_ENTITY_TYPES = {
 }
 
 
+# Common words that should not normally be part of a character name.
+
+# Common words that are unlikely to be standalone named entities.
+PERSON_STOP_WORDS = {
+    "met", "said", "says", "asked", "replied",
+    "went", "came", "saw", "looked", "told",
+    "spoke", "walked", "ran", "lived", "stood",
+    "is", "was", "were", "are", "the", "and",
+    "but", "then", "when", "where", "who",
+    "kinsman", "kinsmen", "doth", "hath", "thou",
+    "thee", "thy", "thine", "ye", "hither",
+}
+
+
+def is_valid_entity(name, entity_type):
+    """Reject obvious false positives without book-specific names."""
+    words = name.casefold().split()
+
+    if not words:
+        return False
+
+    # Reject a standalone common word mistakenly detected as a person.
+    if entity_type == "PERSON":
+        if len(words) == 1 and words[0] in PERSON_STOP_WORDS:
+            return False
+
+        # Reject multiword detections containing obvious sentence verbs.
+        if any(word in PERSON_STOP_WORDS for word in words):
+            return False
+
+    # Reject common standalone words incorrectly detected as organizations
+    # or locations. Multiword names are retained for further analysis.
+    if len(words) == 1 and words[0] in {
+        "doth", "hath", "thou", "thee", "thy", "thine",
+        "kinsman", "kinsmen",
+    }:
+        if entity_type in {"ORG", "GPE", "LOC", "FAC"}:
+            return False
+
+    return True
+
 def normalize_entity_name(name):
     """
     Normalize an entity name for consistent database storage.
@@ -38,30 +79,28 @@ def normalize_entity_name(name):
 
 def extract_entities_from_text(text):
     """
-    Extract named entities from one chapter.
-
-    Returns a list of entities with their types and character
-    positions in the original chapter text.
+    Extract named entities from any book text using spaCy.
+    No book-specific character names are hardcoded.
     """
     if not isinstance(text, str) or not text.strip():
         return []
 
     doc = nlp(text)
-
     extracted = []
 
     for entity in doc.ents:
         if entity.label_ not in SUPPORTED_ENTITY_TYPES:
             continue
 
-        entity_name = re.sub(r"\s+", " ", entity.text).strip()
-        normalized_name = normalize_entity_name(entity_name)
+        name = re.sub(r"\s+", " ", entity.text).strip()
 
-        if not normalized_name:
+        if not name or not is_valid_entity(name, entity.label_):
             continue
 
+        normalized_name = normalize_entity_name(name)
+
         extracted.append({
-            "entity_name": entity_name,
+            "entity_name": name,
             "normalized_name": normalized_name,
             "entity_type": entity.label_,
             "start_char": entity.start_char,
@@ -192,6 +231,41 @@ def extract_and_store_book_entities(book_id):
         "entities": len(entity_cache),
         "mentions": total_mentions,
     }
+
+
+
+def get_book_entities(book_id, current_chapter):
+    """
+    Return entities mentioned up to the reader's current chapter.
+    Future chapter mentions are excluded to prevent spoilers.
+    """
+    with get_db_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                e.id,
+                e.entity_name,
+                e.normalized_name,
+                e.entity_type,
+                MIN(ch.chapter_number) AS first_mentioned_chapter,
+                COUNT(m.id) AS visible_mentions
+            FROM entities e
+            JOIN entity_mentions m ON m.entity_id = e.id
+            JOIN chapters ch ON ch.id = m.chapter_id
+            WHERE e.book_id = ?
+              AND ch.book_id = ?
+              AND ch.chapter_number <= ?
+            GROUP BY
+                e.id,
+                e.entity_name,
+                e.normalized_name,
+                e.entity_type
+            ORDER BY first_mentioned_chapter, e.entity_name
+            """,
+            (book_id, book_id, current_chapter),
+        ).fetchall()
+
+    return [dict(row) for row in rows]
 
 
 if __name__ == "__main__":

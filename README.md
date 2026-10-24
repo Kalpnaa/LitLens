@@ -20,7 +20,7 @@ The core idea is simple:
 | Phase 4 | 🔎 Question Processing and Retrieval | ✅ Done |
 | Phase 5 | 🛡️ Spoiler-Aware Retrieval | ✅ Done |
 | Phase 6 | 💬 Question Answering and Local LLM Integration | ✅ Done |
-| Phase 7 | 👤 Character Intelligence | ⏳ Pending |
+| Phase 7 | 👤 Character Intelligence | ✅ Done |
 | Phase 8 | 🕸️ Character Relationship Analysis | ⏳ Pending |
 | Phase 9 | 📖 Reading Interface and Progress Tracking | ⏳ Pending |
 | Phase 10 | 📊 Evaluation | ⏳ Pending |

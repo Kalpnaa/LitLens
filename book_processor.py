@@ -5,7 +5,7 @@ from database import get_db_connection
 from text_extractor import extract_text
 from chapter_detector import detect_chapters
 from text_chunker import chunk_text
-
+from character_extractor import extract_and_store_book_entities
 
 def process_book(book_id, max_words=180, overlap_sentences=1):
     """Extract, detect, save sections, and create searchable chunks."""
@@ -105,8 +105,10 @@ def process_book(book_id, max_words=180, overlap_sentences=1):
             """,
             ("completed", book_id),
         )
-
+    entity_results = extract_and_store_book_entities(book_id)
     return {
         "sections": len(sections),
         "chunks": total_chunks,
+        "entities": entity_results["entities"],
+        "mentions": entity_results["mentions"],
     }
