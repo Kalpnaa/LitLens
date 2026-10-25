@@ -9,6 +9,7 @@ from database import init_db,get_db_connection
 from book_processor import process_book
 from retriever import retrieve_chunks,retrieve_summary_chunks,is_summary_request
 from llm import generate_answer
+from relationship_extractor import get_character_relationships
 
 app = Flask(__name__)
 
@@ -258,12 +259,14 @@ def read_book(book_id):
                         top_k=5
                     )
                     
+                                
                 if not results:
                     error = (
                         "I couldn't find relevant information "
                         "in the chapters you've read so far."
                     )
                 else:
+                    # Build context from the retrieved book passages.
                     context = "\n\n".join(
                         (
                             f"Chapter {item['chapter_number']}: "
@@ -273,8 +276,35 @@ def read_book(book_id):
                         for item in results
                     )
 
+                    # Retrieve relationships only up to the current chapter.
+                    relationships = get_character_relationships(
+                        book_id,
+                        current_chapter
+                    )
+
+                    # Format stored relationships for the LLM.
+                    if relationships:
+                        relationship_context = "\n".join(
+                            (
+                                f"- {item['source_character']} -> "
+                                f"{item['relationship_type']} -> "
+                                f"{item['target_character']}. "
+                                f"Details: {item['relationship_detail']}. "
+                                f"Evidence: {item['evidence']}"
+                            )
+                            for item in relationships
+                        )
+
+                        context += (
+                            "\n\nCharacter relationship information "
+                            "from chapters read so far:\n"
+                            + relationship_context
+                        )
+
+                    # Generate an answer using passages and relationships.
                     answer = generate_answer(question, context)
                     sources = results
+
             except Exception:
                 app.logger.exception("Question answering failed")
                 error = (
