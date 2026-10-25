@@ -7,7 +7,7 @@ from database import get_db_connection
 
 # Load the English NLP model once when the module is imported.
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_lg")
 except OSError as error:
     raise RuntimeError(
         "The spaCy English model is missing. "

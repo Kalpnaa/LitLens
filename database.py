@@ -103,7 +103,42 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_entity_mentions_chapter
             ON entity_mentions (chapter_id)
         """)
+        
+        connection.execute("""
+                           CREATE TABLE IF NOT EXISTS character_relationships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_id INTEGER NOT NULL,
+            source_entity_id INTEGER NOT NULL,
+            target_entity_id INTEGER NOT NULL,
+            relationship_type TEXT NOT NULL,
+            relationship_detail TEXT,
+            direction TEXT NOT NULL,
+            chapter_id INTEGER NOT NULL,
+            evidence TEXT NOT NULL,
 
+            FOREIGN KEY (book_id)
+                REFERENCES books(id) ON DELETE CASCADE,
+
+            FOREIGN KEY (source_entity_id)
+                REFERENCES entities(id) ON DELETE CASCADE,
+
+            FOREIGN KEY (target_entity_id)
+                REFERENCES entities(id) ON DELETE CASCADE,
+
+            FOREIGN KEY (chapter_id)
+                REFERENCES chapters(id) ON DELETE CASCADE
+        )""")
+        
+        
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_relationships_book
+            ON character_relationships(book_id)
+            """)
+        
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS idx_relationships_chapter
+            ON character_relationships(chapter_id)   
+            """)
 
 
 
