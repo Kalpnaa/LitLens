@@ -6,6 +6,7 @@ from text_extractor import extract_text
 from chapter_detector import detect_chapters
 from text_chunker import chunk_text
 from character_extractor import extract_and_store_book_entities
+from relationship_extractor import extract_relationships_from_text,store_relationships,filter_relationships_by_known_characters
 
 def process_book(book_id, max_words=180, overlap_sentences=1):
     """Extract, detect, save sections, and create searchable chunks."""
@@ -46,6 +47,10 @@ def process_book(book_id, max_words=180, overlap_sentences=1):
             raise ValueError("No text chunks could be generated.")
 
         # Replace old chunks and sections atomically.
+        connection.execute(
+        "DELETE FROM character_relationships WHERE book_id = ?",
+        (book_id,)
+        )
         connection.execute(
             "DELETE FROM chunks WHERE book_id = ?",
             (book_id,)
@@ -105,10 +110,48 @@ def process_book(book_id, max_words=180, overlap_sentences=1):
             """,
             ("completed", book_id),
         )
+    
     entity_results = extract_and_store_book_entities(book_id)
+    all_relationships = []
+
+    with get_db_connection() as connection:
+        chapters = connection.execute(
+            """
+            SELECT id, chapter_number, text
+            FROM chapters
+            WHERE book_id = ?
+            ORDER BY chapter_number
+            """,
+            (book_id,),
+        ).fetchall()
+
+    for chapter in chapters:
+        relationships = extract_relationships_from_text(
+            chapter["text"],
+            chapter_number=chapter["chapter_number"],
+        )
+
+        # Keep the database chapter ID with each relationship.
+        for relationship in relationships:
+            relationship["chapter_id"] = chapter["id"]
+
+        all_relationships.extend(relationships)
+
+    all_relationships = filter_relationships_by_known_characters(
+    book_id,
+    all_relationships,
+)
+    relationship_results = store_relationships(
+        book_id,
+        all_relationships,
+    )
+
     return {
         "sections": len(sections),
         "chunks": total_chunks,
         "entities": entity_results["entities"],
         "mentions": entity_results["mentions"],
+        "relationships_detected": len(all_relationships),
+        "relationships_stored": relationship_results["stored"],
+        "relationships_skipped": relationship_results["skipped"],
     }

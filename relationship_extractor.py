@@ -16,6 +16,35 @@ except OSError as error:
 # Patterns are applied to individual sentences.
 # These are initial rules, not a complete relationship parser.
 RELATIONSHIP_RULES = [
+    
+    # Character descriptions in cast lists, e.g. "Romeo, son to Montague."
+    (
+        "family",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)"
+            r"\s*,\s*(?:the\s+)?"
+            r"(?P<relation>son|daughter|child|nephew|niece|"
+            r"kinsman|kinswoman|wife|husband|father|mother|"
+            r"brother|sister|cousin)\s+"
+            r"(?:to|of)\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "directed",
+    ),
+
+    # Friendship stated in a character description.
+    # Example: "Mercutio, kinsman to the Prince and friend to Romeo."
+    (
+        "friendship",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)"
+            r"\s*,(?:(?![.!?]).)*?"
+            r"\bfriend\s+(?:to|of|with)\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "mutual",
+    ),
+
     # Family relationships with explicit direction.
         
     (
@@ -25,7 +54,7 @@ RELATIONSHIP_RULES = [
             r"is\s+the\s+(?P<relation>son|daughter|child)\s+of\s+"
             r"(?P<parent>(?:Lord|Lady|Sir|Dame|Dr\.?)\s+)?"
             r"(?P<parent_name>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)*)",
-            re.IGNORECASE,
+            
         ),
         "child_to_parent",
     ),
@@ -36,7 +65,7 @@ RELATIONSHIP_RULES = [
             r"(?P<parent_name>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)*)\s+"
             r"is\s+the\s+(?P<relation>father|mother|parent)\s+of\s+"
             r"(?P<child>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)*)",
-            re.IGNORECASE,
+            
         ),
         "parent_to_child",
     ),
@@ -46,10 +75,10 @@ RELATIONSHIP_RULES = [
     (
         "romantic",
         re.compile(
-            r"\b(?P<first>[\w'-]+)\s+"
+            r"\b(?P<first>[A-Z][\w'-]*)\s+"
             r"(?:loves|loved|adores|adored)\s+"
-            r"(?P<second>[\w'-]+)\b",
-            re.IGNORECASE,
+            r"(?P<second>[A-Z][\w'-]*)\b",
+            
         ),
         "directed",
     ),
@@ -58,22 +87,82 @@ RELATIONSHIP_RULES = [
     (
         "conflict",
         re.compile(
-            r"\b(?P<first>[\w'-]+)\s+"
+            r"\b(?P<first>[A-Z][\w'-]*)\s+"
             r"(?:is|was|remains)\s+"
             r"(?:an?\s+)?"
             r"(?:enemy|rival)\s+of\s+"
-            r"(?P<second>[\w'-]+)\b",
-            re.IGNORECASE,
+            r"(?P<second>[A-Z][\w'-]*)\b",
         ),
         "mutual",
     ),
     (
         "conflict",
         re.compile(
-            r"\b(?P<first>[\w'-]+)\s+"
+            r"\b(?P<first>[A-Z][\w'-]*)\s+"
             r"(?:hates|hated|fights|fought)\s+"
-            r"(?P<second>[\w'-]+)\b",
-            re.IGNORECASE,
+            r"(?P<second>[A-Z][\w'-]*)\b",
+            
+        ),
+        "directed",
+    ),
+        # Romantic relationships expressed in different ways.
+    (
+        "romantic",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"(?:is|was|falls|fell)\s+in love with\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "directed",
+    ),
+    (
+        "romantic",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"(?:is|was)\s+fond of\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "directed",
+    ),
+
+    # Friendship and trust.
+    (
+        "friendship",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"(?:is|are|was|were|became)\s+friends?\s+with\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "mutual",
+    ),
+    (
+        "friendship",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"(?:trusts|trusted|helps|helped|supports|supported)\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "directed",
+    ),
+
+    # Arguments and fighting.
+    (
+        "conflict",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"(?:argues|argued|fights|fought)\s+with\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
+        ),
+        "mutual",
+    ),
+
+    # Sibling relationships.
+    (
+        "family",
+        re.compile(
+            r"\b(?P<first>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\s+"
+            r"is\s+the\s+(?:brother|sister|sibling)\s+of\s+"
+            r"(?P<second>[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*)?)\b"
         ),
         "directed",
     ),
@@ -167,6 +256,111 @@ def normalize_name(name):
     return re.sub(r"\s+", " ", name).strip().casefold()
 
 
+def get_known_character_names(book_id):
+    """Return existing character names for a book."""
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT entity_name, normalized_name
+            FROM entities
+            WHERE book_id = ?
+              AND entity_type = 'PERSON'
+            """,
+            (book_id,),
+        ).fetchall()
+
+        return {
+            row["normalized_name"]: row["entity_name"]
+            for row in rows
+        }
+
+    finally:
+        connection.close()
+
+def filter_relationships_by_known_characters(book_id, relationships):
+    """Keep relationships whose endpoints match known character entities."""
+    known_names = get_known_character_names(book_id)
+    filtered = []
+
+    for relationship in relationships:
+        source = normalize_name(relationship["source_character"])
+        target = normalize_name(relationship["target_character"])
+
+        source_id_name = source if source in known_names else None
+        target_id_name = target if target in known_names else None
+
+        # Support titles such as "Lord Capulet" when "Capulet"
+        # is the existing character entity.
+        if source_id_name is None:
+            source = re.sub(
+                r"^(lord|lady|sir|dame|dr\.?)\s+",
+                "",
+                source,
+                flags=re.IGNORECASE,
+            )
+            source_id_name = source if source in known_names else None
+
+        if target_id_name is None:
+            target = re.sub(
+                r"^(lord|lady|sir|dame|dr\.?)\s+",
+                "",
+                target,
+                flags=re.IGNORECASE,
+            )
+            target_id_name = target if target in known_names else None
+
+        if source_id_name and target_id_name:
+            filtered.append(relationship)
+
+    return filtered
+
+
+def find_entity_id(cursor, book_id, character_name):
+    """Match an extracted name to an existing entity."""
+    normalized = normalize_name(character_name)
+
+    # First try an exact match.
+    row = cursor.execute(
+        """
+        SELECT id FROM entities
+        WHERE book_id = ? AND normalized_name = ?
+        ORDER BY CASE WHEN entity_type = 'PERSON' THEN 0 ELSE 1 END
+        LIMIT 1
+        """,
+        (book_id, normalized),
+    ).fetchone()
+
+    if row:
+        return row["id"]
+
+    # If a title is present, try matching the name without that title.
+    without_title = re.sub(
+        r"^(lord|lady|sir|dame|dr\.?)\s+",
+        "",
+        character_name.strip(),
+        flags=re.IGNORECASE,
+    )
+    normalized_without_title = normalize_name(without_title)
+
+    if normalized_without_title != normalized:
+        row = cursor.execute(
+            """
+            SELECT id FROM entities
+            WHERE book_id = ? AND normalized_name = ?
+            ORDER BY CASE WHEN entity_type = 'PERSON' THEN 0 ELSE 1 END
+            LIMIT 1
+            """,
+            (book_id, normalized_without_title),
+        ).fetchone()
+
+        if row:
+            return row["id"]
+
+    return None
+
+
 def store_relationships(book_id, relationships):
     """
     Store relationships only when both characters already exist
@@ -192,42 +386,46 @@ def store_relationships(book_id, relationships):
                 skipped_count += 1
                 continue
 
-            source = cursor.execute(
-                """
-                SELECT id FROM entities
-                WHERE book_id = ? AND normalized_name = ?
-                LIMIT 1
-                """,
-                (book_id, source_name),
-            ).fetchone()
+            
+            source_id = find_entity_id(
+                cursor, book_id, relationship["source_character"]
+            )
 
-            target = cursor.execute(
-                """
-                SELECT id FROM entities
-                WHERE book_id = ? AND normalized_name = ?
-                LIMIT 1
-                """,
-                (book_id, target_name),
-            ).fetchone()
+            target_id = find_entity_id(
+                cursor, book_id, relationship["target_character"]
+            )
 
-            chapter = cursor.execute(
-                """
-                SELECT id FROM chapters
-                WHERE book_id = ? AND chapter_number = ?
-                LIMIT 1
-                """,
-                (book_id, chapter_number),
-            ).fetchone()
+            
+            chapter_id = relationship.get("chapter_id")
+
+            if chapter_id is not None:
+                chapter = cursor.execute(
+                    """
+                    SELECT id FROM chapters
+                    WHERE id = ? AND book_id = ?
+                    LIMIT 1
+                    """,
+                    (chapter_id, book_id),
+                ).fetchone()
+            else:
+                chapter = cursor.execute(
+                    """
+                    SELECT id FROM chapters
+                    WHERE book_id = ? AND chapter_number = ?
+                    LIMIT 1
+                    """,
+                    (book_id, chapter_number),
+                ).fetchone()
 
             # Do not create new characters or guess missing chapters.
-            if source is None or target is None or chapter is None:
+            if source_id is None or target_id is None or chapter is None:
                 skipped_count += 1
                 continue
 
             values = (
                 book_id,
-                source["id"],
-                target["id"],
+                source_id,
+                target_id,
                 relationship["relationship_type"],
                 relationship.get("relationship_detail"),
                 relationship["direction"],
@@ -248,8 +446,8 @@ def store_relationships(book_id, relationships):
                 """,
                 (
                     book_id,
-                    source["id"],
-                    target["id"],
+                    source_id,
+                    target_id,
                     relationship["relationship_type"],
                     chapter["id"],
                     relationship["evidence"],
@@ -334,11 +532,13 @@ def get_character_relationships(book_id, current_chapter):
 
 if __name__ == "__main__":
     tests = [
-        "Juliet is the daughter of Lord Capulet.",
-        "Romeo loves Juliet.",
-        "Romeo is an enemy of Tybalt.",
-        "Romeo met Benvolio while Juliet spoke to her mother.",
-    ]
+    "Alice is in love with Daniel.",
+    "Maya is friends with Priya.",
+    "Arjun trusts Rohan.",
+    "Olivia argued with Ethan.",
+    "Sofia is the sister of Lucas.",
+    "The weather is beautiful today.",
+]
 
     for sentence in tests:
         print(f"\nSentence: {sentence}")
